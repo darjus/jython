@@ -64,6 +64,12 @@ options {
     tokenVocab=Python;
 }
 
+tokens {
+    INDENT;
+    DEDENT;
+    TRAILBACKSLASH; //For dangling backslashes when partial parsing.
+}
+
 @header {
 package org.python.antlr;
 }
@@ -133,7 +139,7 @@ private ErrorHandler errorHandler;
                 if (implicitLineJoiningLevel > 0) {
                     eofWhileNested = true;
                 }
-                return Token.EOF_TOKEN;
+                return getEOFToken();
             }
             try {
                 mTokens();

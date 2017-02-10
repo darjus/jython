@@ -256,7 +256,7 @@ private ErrorHandler errorHandler;
                 if (implicitLineJoiningLevel > 0) {
                     eofWhileNested = true;
                 }
-                return Token.EOF_TOKEN;
+                return getEOFToken();
             }
             try {
                 mTokens();
@@ -995,9 +995,16 @@ import_from
 //import_as_names: import_as_name (',' import_as_name)* [',']
 import_as_names
     returns [List<alias> atypes]
+@init {
+    List<alias> interimList = new ArrayList<alias>();
+}
     : n+=import_as_name (COMMA! n+=import_as_name)*
     {
-        $atypes = $n;
+        // XXX getToken is now used, which returns Object
+        for (Object interimAlias : $n) {
+            interimList.add((alias)interimAlias);
+        }
+        $atypes = interimList;
     }
     ;
 
@@ -1029,18 +1036,31 @@ dotted_as_name
 //dotted_as_names: dotted_as_name (',' dotted_as_name)*
 dotted_as_names
     returns [List<alias> atypes]
+@init {
+    List<alias> interimList = new ArrayList<alias>();
+}
     : d+=dotted_as_name (COMMA! d+=dotted_as_name)*
     {
-        $atypes = $d;
+        // XXX getToken is now used, which returns Object
+        for (Object interimAlias : $d) {
+            interimList.add((alias)interimAlias);
+        }
+        $atypes = interimList;
     }
     ;
 
 //dotted_name: NAME ('.' NAME)*
 dotted_name
     returns [List<Name> names]
+@init {
+    List<PythonTree> interimList = new ArrayList<PythonTree>();
+}
     : NAME (DOT dn+=attr)*
     {
-        $names = actions.makeDottedName($NAME, $dn);
+        for (Object interimTree : $dn) {
+            interimList.add((PythonTree)interimTree);
+        }
+        $names = actions.makeDottedName($NAME, interimList);
     }
     ;
 
@@ -1048,13 +1068,17 @@ dotted_name
 global_stmt
 @init {
     stmt stype = null;
+    List<Token> interimList = new ArrayList<Token>();
 }
 @after {
    $global_stmt.tree = stype;
 }
     : GLOBAL n+=NAME (COMMA n+=NAME)*
       {
-          stype = new Global($GLOBAL, actions.makeNames($n), actions.makeNameNodes($n));
+          for (Object interimToken : $n) {
+              interimList.add((Token)interimToken);
+          }
+          stype = new Global($GLOBAL, actions.makeNames(interimList), actions.makeNameNodes(interimList));
       }
     ;
 
@@ -1185,6 +1209,7 @@ for_stmt
 try_stmt
 @init {
     stmt stype = null;
+    List<excepthandler> interimList = new ArrayList<excepthandler>();
 }
 @after {
    $try_stmt.tree = stype;
@@ -1192,7 +1217,10 @@ try_stmt
     : TRY COLON trysuite=suite[!$suite.isEmpty() && $suite::continueIllegal]
       ( e+=except_clause+ (ORELSE COLON elsesuite=suite[!$suite.isEmpty() && $suite::continueIllegal])? (FINALLY COLON finalsuite=suite[true])?
         {
-            stype = actions.makeTryExcept($TRY, $trysuite.stypes, $e, $elsesuite.stypes, $finalsuite.stypes);
+            for (Object interimExcepthandler : $e) {
+                interimList.add((excepthandler)interimExcepthandler);
+            }
+            stype = actions.makeTryExcept($TRY, $trysuite.stypes, interimList, $elsesuite.stypes, $finalsuite.stypes);
         }
       | FINALLY COLON finalsuite=suite[true]
         {
@@ -1205,13 +1233,17 @@ try_stmt
 with_stmt
 @init {
     stmt stype = null;
+    List<With> interimList = new ArrayList<With>();
 }
 @after {
    $with_stmt.tree = stype;
 }
     : WITH w+=with_item (options {greedy=true;}:COMMA w+=with_item)* COLON suite[false]
       {
-          stype = actions.makeWith($WITH, $w, $suite.stypes);
+          for (Object interimWith : $w) {
+              interimList.add((With)interimWith);
+          }
+          stype = actions.makeWith($WITH, interimList, $suite.stypes);
       }
     ;
 

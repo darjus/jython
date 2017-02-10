@@ -276,7 +276,7 @@ public class PythonTokenSource implements TokenSource {
                 }
             }
         }
-        List<Token> hiddenTokens = stream.getTokens(lastTokenAddedIndex + 1,t.getTokenIndex() - 1);
+        List<Token> hiddenTokens = (List<Token>)stream.getTokens(lastTokenAddedIndex + 1,t.getTokenIndex() - 1);
         if (hiddenTokens != null) {
             tokens.addAll(hiddenTokens);
         }

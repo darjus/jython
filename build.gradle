@@ -2,6 +2,8 @@ apply plugin: 'idea'
 apply plugin: 'java'
 apply plugin: 'antlr'
 
+def exposeDir = "$buildDir/generated-src/expose"
+
 repositories {
     mavenCentral()
 }
@@ -78,6 +80,38 @@ subprojects {
 }
 
 
+sourceSets {
+    main {
+        output.dir(exposeDir)
+    }
+}
+
+task makeExposeDir {
+  doLast {
+    def generated = new File(generatedResources, "myGeneratedResource.properties")
+    generated.text = "message=Stay happy!"
+  }
+}	
+task expose(dependsOn: 'compileJava') {
+    doLast {
+    	def taskPath = sourceSets.main.compileClasspath + files(sourceSets.main.output.classesDir)
+	println exposeDir
+	ant.taskdef(name: 'expose',
+                    classname: 'org.python.expose.generate.ExposeTask',
+                    classpath: taskPath.asPath)
+        ant.expose(srcdir: sourceSets.main.output.classesDir,
+                destdir: exposeDir,
+                includesfile: 'CoreExposed.includes') {
+//            formatter(type: 'text', toConsole: 'true')
+        }
+    }
+}
+
+task copyJavaLib(type: Copy) {
+}
+     
+     
+
 idea {
     project {
         jdkName = '1.7'
@@ -89,6 +123,15 @@ compileJava {
     dependsOn generateGrammarSource
 }
 
+jar {
+    dependsOn expose
+    archiveName 'jython-dev.jar'
+    manifest {
+        attributes "Main-Class": "org.python.util.jython",
+		   "Built-By": System.properties['user.name']
+    }
+}
+
 sourceSets {
     main {
         java {
@@ -98,15 +141,3 @@ sourceSets {
    }
 }
 
-task expose {
-    doLast {
-        ant.taskdef(name: 'expose',
-                    classname: 'org.python.expose.generate.ExposeTask',
-                    classpath: sourceSets.main.compileClasspath)
-        ant.expose(srcdir: sourceSet.output.classesDir,
-                destdir: sourceSet.output.classesDir,
-                includesfile: 'CoreExposed.includes') {
-            formatter(type: 'text', toConsole: 'true')
-        }
-    }
-}
